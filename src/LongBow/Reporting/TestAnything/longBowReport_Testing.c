@@ -33,12 +33,13 @@
 #include <LongBow/private/longBow_String.h>
 
 // We need to track how may unit tests are executed
-static unsigned _testCount = 0;
+static unsigned _currentTestNumber = 0;
 
 static const char *TAP_OK = "ok";
 static const char *TAP_NOTOK = "not ok";
-static const char *TAP_SKIP = "# skip";
-static const char *TAP_NOTSKIP = "-";
+static const char *TAP_SKIP = "# skip ";
+//static const char *TAP_NOTSKIP = "-";
+static const char *TAP_NOTSKIP = "";
 static const char *TAP_BAIL = "Bail out!";
 
 // The original stdout FILE*
@@ -61,9 +62,9 @@ _printTapHeader(void)
 }
 
 void
-_printTapPlan(unsigned count)
+_printTapPlan(size_t count)
 {
-	fprintf(real_stdout, "1..%u\n", count);
+	fprintf(real_stdout, "1..%u\n", (unsigned) count);
 }
 
 static const LongBowTestRunner *
@@ -72,7 +73,6 @@ _testRunnerSilent(const LongBowTestRunner *testRunner)
     LongBowStatus status = longBowTestRunner_GetStatus(testRunner);
 
     printf("# %s %s\n", longBowTestRunner_GetName(testRunner), longBowStatus_ToString(status));
-    _printTapPlan(_testCount);
     return testRunner;
 }
 
@@ -81,15 +81,14 @@ _testRunnerDetail(const LongBowTestRunner *testRunner)
 {
     size_t nFixtures = longBowTestRunner_GetFixtureCount(testRunner);
 
-    fprintf(real_stdout, "#\r\n");
-    fprintf(real_stdout, "# %s: %zd fixture%s\r\n", longBowTestRunner_GetName(testRunner), nFixtures, (nFixtures == 1 ? "" : "s"));
+    fprintf(real_stdout, "\n#\n");
+    fprintf(real_stdout, "# %s: %zd fixture%s\n", longBowTestRunner_GetName(testRunner), nFixtures, (nFixtures == 1 ? "" : "s"));
 
     for (size_t i = 0; i < nFixtures; i++) {
         LongBowTestFixture *fixture = longBowTestRunner_GetFixture(testRunner, i);
         longBowReportTesting_TestFixture(fixture);
     }
 
-    _printTapPlan(_testCount);
     return testRunner;
 }
 
@@ -128,11 +127,14 @@ longBowReportTesting_Initialize(void)
 
 	read_stdout = fopen(fifo_name, "r");
 
+	_printTapHeader();
 }
 
 void
 longBowReportTesting_Finalize(void)
 {
+	_printTapPlan(_currentTestNumber);
+
 	fclose(write_stdout);
 	pclose(read_stdout);
 
@@ -211,10 +213,10 @@ longBowReportTesting_TestFixture(const LongBowTestFixture *testFixture)
 
     _reportSummary(testFixture);
 
-    for (size_t i = 0; i < nTestCases; i++) {
-        LongBowTestCase *testCase = longBowTestFixture_GetTestCase(testFixture, i);
-        longBowReportTesting_TestCase(testCase);
-    }
+//    for (size_t i = 0; i < nTestCases; i++) {
+//        LongBowTestCase *testCase = longBowTestFixture_GetTestCase(testFixture, i);
+//        longBowReportTesting_TestCase(testCase);
+//    }
     return testFixture;
 }
 
@@ -253,7 +255,7 @@ _createStatusString(const char *tap_ok, unsigned testNumber, const char *skipStr
 		const char *elapsedTimeString, const char *rusageString, size_t evaluationCount,
 		const char *statusString)
 {
-    LongBowString *string = longBowString_CreateFormat("%s %u %s %10s %s %s %zd %s\n",
+    LongBowString *string = longBowString_CreateFormat("%s %u %s%10s %s %s %zd %s\n",
     							tap_ok,
 								testNumber,
 								skipString,
@@ -268,14 +270,14 @@ _createStatusString(const char *tap_ok, unsigned testNumber, const char *skipStr
 static void
 _startYaml(void)
 {
-	fprintf(real_stdout, " ---\n");
+	fprintf(real_stdout, "  ---\n");
 	fprintf(real_stdout, "  stdout:\n");
 }
 
 static void
 _stopYaml(void)
 {
-	fprintf(real_stdout, " ...\n");
+	fprintf(real_stdout, "  ...\n");
 }
 
 /**
@@ -306,7 +308,7 @@ _redirectStdout(void)
 					needStopYaml = true;
 				}
 
-				fprintf(real_stdout, "     %s", buffer);
+				fprintf(real_stdout, "    %s", buffer);
 			} else {
 				finished = true;
 			}
@@ -325,11 +327,7 @@ _redirectStdout(void)
 void
 longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
 {
-	if (_testCount == 0) {
-		_printTapHeader();
-	}
-
-	_testCount++;
+	_currentTestNumber++;
 
     LongBowRuntimeResult *testCaseResult = longBowTestCase_GetActualResult(testCase);
     char *rusageString = longBowReportRuntime_RUsageToString(longBowRuntimeResult_GetRUsage(testCaseResult));
@@ -356,7 +354,7 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
         case LongBowStatus_UNTESTED:
             string = _createStatusString(
 						TAP_OK,
-						_testCount,
+						_currentTestNumber,
 						TAP_NOTSKIP,
 						testCaseString,
 						elapsedTimeString,
@@ -368,7 +366,7 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
         case LONGBOW_STATUS_SKIPPED:
             string = _createStatusString(
 						TAP_OK,
-						_testCount,
+						_currentTestNumber,
 						TAP_SKIP,
 						testCaseString,
 						elapsedTimeString,
@@ -384,7 +382,7 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
         case LONGBOW_STATUS_TEARDOWN_FAILED:
             string = _createStatusString(
 						TAP_NOTOK,
-						_testCount,
+						_currentTestNumber,
 						TAP_NOTSKIP,
 						testCaseString,
 						elapsedTimeString,
@@ -396,7 +394,7 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
         case LongBowStatus_STOPPED:
             string = _createStatusString(
 						TAP_BAIL,
-						_testCount,
+						_currentTestNumber,
 						TAP_NOTSKIP,
 						testCaseString,
 						elapsedTimeString,
@@ -405,12 +403,11 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
 						statusString);
             break;
 
-            // fall through
         default:
             if (testCaseResult->status >= LongBowStatus_SIGNALLED) {
                 string = _createStatusString(
     						TAP_BAIL,
-    						_testCount,
+    						_currentTestNumber,
     						"- SIGNALED",
     						testCaseString,
     						elapsedTimeString,
@@ -420,7 +417,7 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
             } else {
                 string = _createStatusString(
     						TAP_BAIL,
-    						_testCount,
+    						_currentTestNumber,
     						"- UNKNOWN",
     						testCaseString,
     						elapsedTimeString,
@@ -435,6 +432,7 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
 
     _redirectStdout();
 
+    fprintf(real_stdout,"\n");
     fflush(real_stdout);
 
     free(testCaseString);
