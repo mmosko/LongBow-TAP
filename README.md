@@ -90,6 +90,29 @@ executed.
 
 `handle 6 nostop pass`
 
+### Eclipse and LongBow ###
+If you install the C/C++ Unit Test framework in Eclipse (along with the C/C++ Development Tools),
+you can create unit test Run Configurations using the "TAP Test Runner."  You may still link your
+non-test code with other LongBow reporters, such as `longbow-ansiterm`.
+
+You must link your unit tests with "-llongbow -llongbow-tap".
+
+Example Makefile snippit:
+```
+SOURCEDIR := src
+BUILDDIR := build
+LONGBOW_DIR := /usr/local/lib
+LONGBOW_LIBS := -Wl,-rpath,$(LONGBOW_DIR) -llongbow -llongbow-tap
+
+TEST_CFLAGS := -std=gnu99 -g -O0 -Wall -Wextra
+
+TESTS := test_alice test_bob test_charlie
+TESTS_OBJ := $(addprefix $(BUILDDIR)/,$(TESTS))
+tests: $(TARGET) $(TESTS_OBJ)
+
+$(BUILDDIR)/test_%: $(TESTDIR)/test_%.c $(SOURCEDIR)/%.c $(SOURCEDIR)/%.h
+        $(CC) $(TEST_CFLAGS) $< -o $@ $(LONGBOW_LIBS)
+```
 
 ### License ###
 
