@@ -379,6 +379,8 @@ longBowReportTesting_DisplayTestCaseResult(const LongBowTestCase *testCase)
     		// fall through
         case LONGBOW_STATUS_SETUP_FAILED:
     		// fall through
+        case LONGBOW_STATUS_MEMORYLEAK:
+    		// fall through
         case LONGBOW_STATUS_TEARDOWN_FAILED:
             string = _createStatusString(
 						TAP_NOTOK,
