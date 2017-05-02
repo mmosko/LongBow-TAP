@@ -114,6 +114,30 @@ $(BUILDDIR)/test_%: $(TESTDIR)/test_%.c $(SOURCEDIR)/%.c $(SOURCEDIR)/%.h
         $(CC) $(TEST_CFLAGS) $< -o $@ $(LONGBOW_LIBS)
 ```
 
+### Command-line test suite runner ###
+Using the TAP reporter (see above about Eclipse), you can use the Perl `prove` command
+to get a nice summary of all your unit tests.
+
+```
+$ prove build/test_* 2> /dev/null
+build/test_ietf_checksums ..... ok   
+build/test_memory_DebugAlloc .. ok    
+build/test_memory_LinkedList .. ok   
+build/test_memory_StdAlloc .... ok   
+build/test_packet ............. ok   
+build/test_packet_queue ....... ok   
+build/test_udp_writer ......... Dubious, test returned 1 (wstat 256, 0x100)
+Failed 2/4 subtests 
+
+Test Summary Report
+-------------------
+build/test_udp_writer       (Wstat: 256 Tests: 4 Failed: 2)
+  Failed tests:  3-4
+  Non-zero exit status: 1
+Files=7, Tests=35,  0 wallclock secs ( 0.04 usr +  0.01 sys =  0.05 CPU)
+Result: FAIL
+```
+
 ### License ###
 
 This software is distributed under the following license:
